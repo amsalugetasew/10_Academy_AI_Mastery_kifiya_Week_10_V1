@@ -7,6 +7,7 @@ from statsmodels.tsa.vector_ar.var_model import VAR
 from sklearn.preprocessing import MinMaxScaler
 from keras.models import Sequential
 from keras.layers import LSTM, Dense
+import pickle
 
 class BrentOilAnalysis:
     def __init__(self, data):
@@ -75,10 +76,29 @@ class BrentOilAnalysis:
             forecast = self.model.forecast(steps=steps)
         elif isinstance(self.model, VAR):
             forecast = self.model.forecast(self.data.values[-steps:], steps=steps)
+        elif isinstance(self.model, Sequential):  # For LSTM model prediction
+            # Make predictions for the next 'steps' using LSTM
+            # Prepare the input as the last available scaled data points
+            input_data = self.data['Scaled_Price'].values[-10:].reshape(1, 10, 1)
+            forecast = self.model.predict(input_data, steps=steps)
         else:
             print("Prediction not supported for this model.")
             return None
         print("Forecast Generated Successfully")
         return forecast
 
-
+    def save_model(self, filename='model.pkl'):
+        """Save the trained model to a file."""
+        if isinstance(self.model, ARIMA):
+            with open(filename, 'wb') as file:
+                pickle.dump(self.model, file)
+            print("ARIMA Model Saved Successfully")
+        elif isinstance(self.model, VAR):
+            with open(filename, 'wb') as file:
+                pickle.dump(self.model, file)
+            print("VAR Model Saved Successfully")
+        elif isinstance(self.model, Sequential):  # For LSTM model
+            self.model.save(filename)
+            print("LSTM Model Saved Successfully")
+        else:
+            print("Model type not recognized for saving.")
