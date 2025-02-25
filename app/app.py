@@ -1,37 +1,25 @@
-from flask import Flask, request, jsonify
+from flask import Flask
+from flask import  request
+from flask import  jsonify
 from flask_cors import CORS
-import numpy as np
-from datetime import datetime
-import pickle
+from model import predict_price
 
 app = Flask(__name__)
-CORS(app, resources={r"/api/*": {"origins": "http://localhost:3000"}})  # React app port
-
-# Load trained model
-with open("app/model.pkl", "rb") as model_file:
-    model = pickle.load(model_file)
-
-def process_date(date_str):
-    date_obj = datetime.strptime(date_str, "%Y-%m-%d")
-    day = date_obj.day
-    month = date_obj.month
-    year = date_obj.year
-    day_of_week = date_obj.weekday()
-    
-    return np.array([day, month, year, day_of_week])
+CORS(app)  # Enable Cross-Origin Requests
 
 @app.route("/api/predict", methods=["POST"])
 def predict():
+    data = request.get_json()
+    input_date = data.get("date")
+
+    if not input_date:
+        return jsonify({"error": "Date is required"}), 400
+
     try:
-        date_str = request.json["date"]
-        features = process_date(date_str).reshape(1, -1)
-        
-        # Get prediction
-        prediction = model.predict(features)[0]
-        
-        return jsonify({"prediction": float(prediction)})
+        price_prediction = predict_price(input_date)
+        return jsonify({"prediction": price_prediction})
     except Exception as e:
-        return jsonify({"error": str(e)}), 400
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
     app.run(debug=True)
